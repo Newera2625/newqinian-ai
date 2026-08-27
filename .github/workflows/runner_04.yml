@@ -6,47 +6,50 @@ jobs:
   tunnel:
     runs-on: ubuntu-latest
     steps:
-      - name: 安装浏览器环境
+      - name: 安装浏览器和 Xvfb
         run: |
-          echo "🌐 安装浏览器和 Xvfb..."
+          echo "🌐 更新软件源..."
           sudo apt-get update -qq
+          
+          echo "📦 安装 Xvfb..."
           sudo apt-get install -y -qq xvfb
           
-          # 安装 Chrome
+          echo "📦 安装 Chrome..."
           wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
           sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
           sudo apt-get update -qq
           sudo apt-get install -y -qq google-chrome-stable
           
-          # 安装 Firefox
+          echo "📦 安装 Firefox..."
           sudo apt-get install -y -qq firefox
           
-          echo "✅ 浏览器安装完成"
-          google-chrome --version
-          firefox --version
-          xvfb --version
+          echo "✅ 安装完成"
+          google-chrome --version 2>/dev/null || echo "Chrome: 已安装"
+          firefox --version 2>/dev/null || echo "Firefox: 已安装"
+          xvfb --version 2>/dev/null || echo "Xvfb: 已安装"
 
-      - name: 配置 SSH 公钥并建立隧道
+      - name: 配置 SSH 并建立隧道
         env:
           SSH_KEY: ${{ secrets.HOME_SERVER_SSH_KEY }}
           HOME_IP: ${{ secrets.HOME_SERVER_IP }}
           HOME_USER: ${{ secrets.HOME_SERVER_USER }}
           RUNNER_ID: "04"
         run: |
-          # 1. 配置 Runner 自己的 SSH 公钥（允许你家服务器无密码登录）
+          # 配置 SSH 公钥
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEm0GahqEojqUUrSlQMQDd0B/m7xdKGbMjZXBG3Aqta github-actions-tunnel" > ~/.ssh/authorized_keys
           chmod 600 ~/.ssh/authorized_keys
           
-          # 2. 启动 SSH 服务
-          sudo systemctl start ssh 2>/dev/null || sudo service ssh start 2>/dev/null || echo "SSH 已运行"
+          # 启动 SSH
+          sudo systemctl start ssh 2>/dev/null || sudo service ssh start 2>/dev/null || true
           
-          # 3. 启动 Xvfb（虚拟显示，供浏览器使用）
+          # 启动 Xvfb
           Xvfb :99 -screen 0 1920x1080x24 &
+          sleep 2
           export DISPLAY=:99
           
-          # 4. 建立反向隧道
+          # 建立隧道
           echo "$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
           echo "🔗 建立隧道 Runner-04 -> 端口 2204"
           ssh -i /tmp/key -N -R 0.0.0.0:2204:localhost:22 \
