@@ -6,15 +6,16 @@ jobs:
   tunnel:
     runs-on: ubuntu-latest
     steps:
-      - name: 安装浏览器和 Xvfb
+      - name: 安装 Chrome 和 Xvfb
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb
           wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
           sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
           sudo apt-get update -qq
-          sudo apt-get install -y -qq google-chrome-stable firefox
-          echo "✅ 浏览器安装完成"
+          sudo apt-get install -y -qq google-chrome-stable
+          echo "✅ Chrome 安装完成"
+          google-chrome --version
 
       - name: 配置 SSH 并建立隧道
         env:
@@ -26,7 +27,7 @@ jobs:
           echo "🔑 重置 root 密码为 123456..."
           echo "root:123456" | sudo chpasswd
           
-          echo "📝 配置 SSH 公钥..."
+          echo "📝 配置 SSH..."
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           cat > ~/.ssh/authorized_keys << 'KEYEOF'
@@ -34,7 +35,6 @@ jobs:
           KEYEOF
           chmod 600 ~/.ssh/authorized_keys
           
-          echo "📝 配置 SSH 允许密码登录..."
           sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
           sudo systemctl restart ssh 2>/dev/null || sudo service ssh restart 2>/dev/null
           
