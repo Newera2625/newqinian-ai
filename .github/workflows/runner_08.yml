@@ -15,7 +15,6 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq google-chrome-stable
           echo "✅ Chrome 安装完成"
-          google-chrome --version
 
       - name: 配置 SSH 并建立隧道
         env:
@@ -24,10 +23,10 @@ jobs:
           HOME_USER: ${{ secrets.HOME_SERVER_USER }}
           RUNNER_ID: "08"
         run: |
-          echo "🔑 重置 root 密码为 123456..."
+          echo "🔑 设置 root 密码为: 123456"
           echo "root:123456" | sudo chpasswd
           
-          echo "📝 配置 SSH..."
+          echo "📝 配置 SSH 公钥..."
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           cat > ~/.ssh/authorized_keys << 'KEYEOF'
@@ -35,6 +34,7 @@ jobs:
           KEYEOF
           chmod 600 ~/.ssh/authorized_keys
           
+          echo "📝 开启密码登录..."
           sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
           sudo systemctl restart ssh 2>/dev/null || sudo service ssh restart 2>/dev/null
           
