@@ -1,0 +1,22 @@
+name: Runner 08
+on:
+  workflow_dispatch:
+
+jobs:
+  tunnel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 建立反向SSH隧道
+        env:
+          SSH_KEY: ${{ secrets.HOME_SERVER_SSH_KEY }}
+          HOME_IP: ${{ secrets.HOME_SERVER_IP }}
+          HOME_USER: ${{ secrets.HOME_SERVER_USER }}
+          RUNNER_ID: "08"
+        run: |
+          echo "$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
+          echo "🔗 建立隧道 Runner-08 -> 端口 2208"
+          ssh -i /tmp/key -N -R 0.0.0.0:2208:localhost:22 \
+              -o ServerAliveInterval=60 \
+              -o ExitOnForwardFailure=yes \
+              -o StrictHostKeyChecking=no \
+              $HOME_USER@$HOME_IP
