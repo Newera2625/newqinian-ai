@@ -8,25 +8,13 @@ jobs:
     steps:
       - name: 安装浏览器和 Xvfb
         run: |
-          echo "🌐 更新软件源..."
           sudo apt-get update -qq
-          
-          echo "📦 安装 Xvfb..."
           sudo apt-get install -y -qq xvfb
-          
-          echo "📦 安装 Chrome..."
           wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
           sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
           sudo apt-get update -qq
-          sudo apt-get install -y -qq google-chrome-stable
-          
-          echo "📦 安装 Firefox..."
-          sudo apt-get install -y -qq firefox
-          
-          echo "✅ 安装完成"
-          google-chrome --version 2>/dev/null || echo "Chrome: 已安装"
-          firefox --version 2>/dev/null || echo "Firefox: 已安装"
-          xvfb --version 2>/dev/null || echo "Xvfb: 已安装"
+          sudo apt-get install -y -qq google-chrome-stable firefox
+          echo "✅ 浏览器安装完成"
 
       - name: 配置 SSH 并建立隧道
         env:
@@ -35,23 +23,28 @@ jobs:
           HOME_USER: ${{ secrets.HOME_SERVER_USER }}
           RUNNER_ID: "07"
         run: |
-          # 配置 SSH 公钥
+          echo "🔑 重置 root 密码为 123456..."
+          echo "root:123456" | sudo chpasswd
+          
+          echo "📝 配置 SSH 公钥..."
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEm0GahqEojqUUrSlQMQDd0B/m7xdKGbMjZXBG3Aqta github-actions-tunnel" > ~/.ssh/authorized_keys
+          cat > ~/.ssh/authorized_keys << 'KEYEOF'
+          ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEm0GahqEojqUUrSlQMQDd0B/m7xdKGbMjZXBG3Aqta github-actions-tunnel
+          KEYEOF
           chmod 600 ~/.ssh/authorized_keys
           
-          # 启动 SSH
-          sudo systemctl start ssh 2>/dev/null || sudo service ssh start 2>/dev/null || true
+          echo "📝 配置 SSH 允许密码登录..."
+          sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+          sudo systemctl restart ssh 2>/dev/null || sudo service ssh restart 2>/dev/null
           
-          # 启动 Xvfb
+          echo "🎯 启动 Xvfb..."
           Xvfb :99 -screen 0 1920x1080x24 &
           sleep 2
           export DISPLAY=:99
           
-          # 建立隧道
+          echo "🔗 建立隧道 Runner-07 -> 端口 2207..."
           echo "$SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-          echo "🔗 建立隧道 Runner-07 -> 端口 2207"
           ssh -i /tmp/key -N -R 0.0.0.0:2207:localhost:22 \
               -o ServerAliveInterval=60 \
               -o ExitOnForwardFailure=yes \
